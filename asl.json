@@ -1,0 +1,52 @@
+{
+  "Comment": "Workflow completo para processar arquivos recebidos no S3 e validar tipo CSV",
+  "StartAt": "ListObjectsV2",
+  "States": {
+    "ListObjectsV2": {
+      "Type": "Task",
+      "Parameters": {
+        "Bucket": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
+      "Next": "VerificarTipoArquivo"
+    },
+    "VerificarTipoArquivo": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.tipoArquivo",
+          "StringEquals": "csv",
+          "Next": "PutObject"
+        }
+      ],
+      "Default": "NotificarFalha"
+    },
+    "PutObject": {
+      "Type": "Task",
+      "Parameters": {
+        "Body": {},
+        "Bucket": "MyData",
+        "Key": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:s3:putObject",
+      "Next": "EncerrarComSucesso"
+    },
+    "NotificarFalha": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Falha no processamento: o arquivo recebido não é do tipo CSV.",
+        "TopicArn": "arn:aws:sns:REGIÃO:ID_DA_CONTA:TopicoFalhaProcessamento"
+      },
+      "Next": "EncerrarComFalha"
+    },
+    "EncerrarComSucesso": {
+      "Type": "Succeed"
+    },
+    "EncerrarComFalha": {
+      "Type": "Fail",
+      "Error": "TipoDeArquivoInvalido",
+      "Cause": "O arquivo recebido não é CSV."
+    }
+  }
+}
